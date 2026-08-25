@@ -1,266 +1,166 @@
-# ESP32 WiFi Sniffer
+# ESP32 Dual WiFi & BLE 2D Raum-Ortungssystem (CYD Touch Edition)
 
-A privacy-focused ESP32 WiFi sniffer system that detects and tracks WiFi devices using RSSI-based trilateration. Built with Rust for the ESP32, with a web-based real-time visualization dashboard.
+Ein autarkes, datenschutzkonformes Ortungssystem auf Basis von C++ (Arduino ESP32 Core) für den ESP32. Das System erfasst zeitgleich **WLAN Probe Requests über das gesamte 13-Kanal-Spektrum** und **Bluetooth Low Energy (BLE) Advertisements** (Smartphones, Smartwatches, In-Ear-Headsets, AirTags oder BLE Beacons) und ermöglicht die **starre 2D-Raum-Ortung** auf einem **2.8" CYD Touch-Display (ESP32-2432S028)** – ganz **ohne PC, ohne Server und ohne WLAN-Router!**
 
-## Web Dashboard Examples
+---
 
-![Single Station Dashboard](docs/station1_only_gui.png)
-*Single ESP32 station connected to the system*
+### 💡 Verfügbare Hardware-Editionen im Repository
 
-![Full System Dashboard](docs/generated_image_gui.jpg)
-*AI-generated example showing all three ESP32 stations connected (screenshot unavailable)*
+* 📱 **`master` Branch (Diese Branch)**: Entwickelt für das **2.8" CYD Touch-Display (ESP32-2432S028)** mit 320x240 LCD, starrem 2D-Raumplan, interaktiver Touch-Geräteauswahl und Touch-Kalibrierung.
+* 🎯 **[`BLE-WLAN` Branch](https://github.com/TJRSchmidbauer/esp32-wifi-BLE-locator/tree/BLE-WLAN)**: Entwickelt für das **1.14" LilyGO / TENSTAR T-Display ESP32** mit 90° Sektor-Radar und dynamischer Blickrichtungs-Führung.
 
-## Features
+---
 
-- **Privacy-First**: MAC addresses are SHA-256 hashed before transmission for GDPR compliance
-- **Secure by Default**: All communications encrypted with TLS 1.3 (HTTPS, WSS, MQTTS)
-- **Real-time Tracking**: Multiple ESP32 stations detect WiFi probe requests and publish RSSI data via MQTT
-- **Trilateration**: Advanced positioning algorithm using gradient descent optimization to calculate device positions
-- **Web Dashboard**: Real-time visualization of detected devices and their positions
-- **Low Latency**: Optimized packet processing with configurable rate limiting
+> 🤖 **Entwicklungs-Hinweis**: Dieses Repository und das gesamte C++ / WebSerial-System werden mit Unterstützung von **Google Antigravity** (einer fortschrittlichen agentischen KI für Pair-Programming von Google DeepMind) entwickelt, optimiert und gewartet.
 
-## Architecture
+---
+
+## 🛒 Benötigte Hardware & 3D-Druck Gehäuse
+
+| Komponente | Rolle im System | Produkt-Link (AliExpress) | 🖨️ 3D-Druck Gehäuse (MakerWorld) |
+| :--- | :--- | :--- | :--- |
+| **ESP32 CYD (Cheap Yellow Display ESP32-2432S028)** | Handheld 2.8" ILI9341 Color LCD Display | 🔗 [AliExpress CYD Display kaufen](https://de.aliexpress.com/item/1005006599448997.html) | 📦 [ESP32 CYD 2.8" Snap-Fit Case (MakerWorld)](https://makerworld.com/de/models/3180623) |
+| **3x ESP32-C3 Super Mini** | Ecken-Stationen (13-Kanal WiFi + BLE Sniffer) | 🔗 [AliExpress ESP32-C3 Super Mini kaufen](https://de.aliexpress.com/item/1005006599448997.html) | 📦 [SuperMini Snap-Fit Case (MakerWorld)](https://makerworld.com/de/models/2851590-esp32-s3-supermini-case-snap-fit-options#profileId-3180623) |
+
+---
+
+## 📸 System-Übersicht & 2D-Raum-Aufbau
 
 ```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│    ESP32     │     │    ESP32     │     │    ESP32     │
-│   Station 1  │     │   Station 2  │     │   Station 3  │
-│              │     │              │     │              │
-│  Sniffs WiFi │     │  Sniffs WiFi │     │  Sniffs WiFi │
-│   Hash MAC   │     │   Hash MAC   │     │   Hash MAC   │
-└──────┬───────┘     └──────┬───────┘     └──────┬───────┘
-       │                    │                    │
-       └────────────────────┴────────────────────┘
-                            │
-                     ┌──────▼───────┐
-                     │     MQTT     │
-                     │    Broker    │
-                     └──────┬───────┘
-                            │
-                     ┌──────▼───────┐
-                     │   Axum Web   │
-                     │    Server    │
-                     └──────┬───────┘
-                            │
-                     ┌──────▼───────┐
-                     │    Browser   │
-                     │   (Web GUI)  │
-                     └──────────────┘
+                         Station 2 (Vorne / Mitte)
+                                  [ 📡 ]
+                                    ▲
+                                   / \
+                                  /   \
+                                 /     \
+                                /   📱  \  ◄── Gesuchtes Zielgerät
+                               /   (•)   \     (wird 2D trianguliert)
+                              /           \
+                             /   ┌─────┐   \
+                            /    │ CYD │    \  ◄── 2.8" CYD Touch-Display
+                           /     └─────┘     \
+                          /                   \
+                         /                     \
+                        ▼                       ▼
+                     [ 📡 ]                   [ 📡 ]
+                Station 1 (Links)        Station 3 (Rechts)
 ```
 
-## Quick Start Summary
+Das System besteht aus genau **4 ESP32-Platinen**:
+1. **3x ESP32-C3 Super Mini (Feste Ortungsstationen in den Ecken)**:
+   - Station 1 (`station1`), Station 2 (`station2`) und Station 3 (`station3`).
+   - Erfassen simultan WLAN-Signale über alle 13 Kanäle und Bluetooth Advertisements mit 97.5% Duty-Cycle.
+2. **1x ESP32 CYD ESP32-2432S028 (Handheld 2D Floorplan Tracker)**:
+   - Sendet periodische ESP-NOW Pings an die 3 Stationen, trianguliert zeitgleich die Position des Handhelds $(X_U, Y_U)$ und aller Zielgeräte $(X_T, Y_T)$ starr im 2D-Raumplan.
+
+---
+
+## 📏 Empfohlene Raumgrößen & Ortungsgenauigkeit
+
+| Raumgröße | Abstand der Stationen | Ortungsverhalten & Präzision | Bewertung |
+| :--- | :--- | :--- | :--- |
+| **Unter 2m × 2m** *(< 4 m²)* | $< 1,5\text{ m}$ | ⚠️ **Zu klein**: Signale überlagern sich. Das Display zeigt das Ziel meist nur starr in der Mitte an. | ❌ Nicht empfohlen |
+| **3m × 3m** *(9 m²)* | $\approx 2,5\text{ m}$ | 🟢 **Geringste sinnvolle Mindestgröße**: Triangulation funktioniert gut. Genauigkeit im Raum ca. $\pm 0,5\text{m}$ bis $\pm 0,8\text{m}$. | ✅ **Mindestgröße** |
+| **4m × 5m** *(20 m²)* | $\approx 3,5\text{ m}$ | 🌟 **Optimaler Bereich (Standard-Zimmer)**: Perfekte Signaltrennung. Sehr gute 2D-Lokalisierung! | ⭐ **Ideal** |
+| **6m × 8m** *(48 m²)* | $\approx 5,5\text{ m}$ | 🟢 **Sehr gut (Großer Raum / Büro)**: Volle Funktion bis ca. 10m Reichweite pro Station. | ✅ Sehr gut |
+
+---
+
+## 📐 Display-Anzeige auf dem CYD 2.8" (320x240 ILI9341 LCD)
+
+```
+┌──────────────────────────────────────┬─────────────────────────┐
+│ ESP32 CYD  |  2D TOUCH LOCATOR       │ TARGET ID: a591a6d4     │
+├──────────────────────────────────────┤ PROXIMITY: 1.8 m        │
+│  [Station 2]                         │ WIFI:   -68 dB          │
+│      📡                              │ BLE :   -72 dB          │
+│       │                              ├─────────────────────────┤
+│       │       🟢 (WiFi)              │ NODES:   3/3            │
+│       │              🟣 (BLE)        │ DEVICES: 1              │
+│       │   🟡 (Target)                ├─────────────────────────┤
+│       │                              │ [  NEXT  ] (Touch)      │
+│  📡───────────────📡                 │ [  CALIB ] (Touch)      │
+│ [Station 1]   [Station 3]            │                         │
+└──────────────────────────────────────┴─────────────────────────┘
+```
+
+---
+
+## ✨ Hauptmerkmale
+
+* 🖐️ **2.8" CYD Touch-Display Unterstützung**: Optimiert für das **ESP32-2432S028 CYD (Cheap Yellow Display)** mit 320x240 Farbbildschirm und XPT2046 SPI Touch Controller.
+* 🗺️ **Starre 2D-Raumplan-Darstellung**: Stellt den Raum mit Wänden, Stationen-Icons und Blips (🟢 WLAN, 🟣 BLE, 🟡 Ziel) visuell dar.
+* 🎯 **Interaktive Touch-Auswahl**: Tippen direkt auf ein Blip auf dem Touchscreen wählt das Gerät aus. Die Touch-Buttons `[NEXT]` und `[CALIB]` steuern die Zielwahl und Raumkalibrierung.
+* 📶 **Full-Spectrum Channel Hopping (Kanal 1–13)**: Erfasst alle WLAN-Kanäle 1 bis 13 und scannte BLE mit 97,5 % Duty-Cycle.
+* 📏 **"Heiß / Kalt"-Entfernung zu deinen Händen**: Misst die direkte Relativ-Distanz zwischen deinen Händen und dem Zielgerät.
+* 🛡️ **Paket-Wiederholungs-Filter (Hit-Count >= 3)**: Erfordert mindestens 3 empfangene Pakete und $\ge 2$ Stationen, um Phantom-Signale zu 100% auszufiltern.
+* 📺 **Flimmerfreie Delta-Render-Engine**: Vermeidet zeilenweises SPI-Nachladen – das Bild steht absolut starr und gestochen scharf.
+* 💡 **RGB-LED Stummschaltung**: Schaltet die störende Rückseiten-LED des CYD-Boards komplett aus.
+* 🔒 **Privacy-First (DSGVO-Konform)**: Eindeutige MAC-Adressen werden noch **direkt auf dem ESP32-Chip per SHA-256 gehasht**. Es werden keine Klardaten oder Paketinhalte übertragen oder gespeichert.
+
+---
+
+## 🚀 Schnellstart & Installation
+
+### Option A: WebSerial Flasher im Browser (Empfohlen)
+
+Für das Flashen wird **kein Tooling** auf dem Ziel-PC benötigt!
+
+1. Öffne die Seite [`web/flash.html`](web/flash.html) in einem WebSerial-fähigen Browser (Chrome, Edge, Brave oder Opera).
+2. Schließe die drei **ESP32-C3 Super Minis** nacheinander per USB-Kabel an und klicke auf der Webseite jeweils auf **"Flashen 🔌"** für Station 1, Station 2 und Station 3.
+3. Schließe danach das **ESP32 CYD Board** an und klicke auf **"Flashen 🎯"** für den Peilsender.
+
+### Option B: Terminal-Skript (`flash_board.sh`)
+
+Stecke nacheinander deine Boards per USB an und führe im Hauptverzeichnis aus:
 
 ```bash
-# 1. Configure environment
-cp .env.example .env
-# Edit .env with your SERVER_IP, WIFI_SSID, WIFI_PASS, MQTT_BROKER=mqtts://...
+# Station 1 flashen
+./flash_board.sh station1
 
-# 2. Generate TLS certificates
-./genssl.sh
+# Station 2 flashen
+./flash_board.sh station2
 
-# 3. Start MQTT broker
-docker-compose up -d
+# Station 3 flashen
+./flash_board.sh station3
 
-# 4. Flash ESP32 (repeat for each station)
-# Edit STATION_ID in .env, then:
-cargo fr
-
-# 5. Start web GUI
-cargo web-l 
-
-# 6. Open browser to https://localhost:3000
-# 7. Monitor MQTT: mosquitto_sub -h $SERVER_IP -p 8883 --cafile ./certs/ca.crt -t '#' -u elev1 -P password -v
+# CYD 2D Ortung Tracker flashen
+./flash_board.sh tracker
 ```
 
-## Security
+---
 
-All communications are encrypted with TLS 1.3:
+## ⚖️ Rechtliche Hinweise & Datenschutz (DSGVO / GDPR)
 
-- **ESP32 → MQTT**: MQTTS on port 8883 with CA certificate verification
-- **Web GUI → MQTT**: MQTTS on port 8883 with CA certificate verification  
-- **Browser → Web GUI**: HTTPS on port 3000 with self-signed certificate
-- **WebSocket**: WSS automatically over HTTPS
+Da Funkwellen im 2.4 GHz Band (WLAN & Bluetooth) auch von Geräten unbeteiligter Dritter ausgesendet werden, wurde dieses System streng nach den Grundsätzen von **Privacy-by-Design** entwickelt:
 
-## Privacy & GDPR Compliance
+1. **Kryptografische Anonymisierung (SHA-256)**:
+   Jede erfasste MAC-Adresse wird **unmittelbar beim Empfang im Arbeitsspeicher des ESP32 mit SHA-256 gehasht**. Es verlassen zu keinem Zeitpunkt unverschlüsselte Quell-MAC-Adressen, Namen oder Inhaltspakete die Mikrocontroller.
+2. **Lokale Funkverarbeitung**:
+   Die Signalstärken werden ausschließlich lokal über das geschlossene ESP-NOW Protokoll zwischen den eigenen 4 Geräten ausgetauscht. Es findet **keinerlei Internetverbindung oder Datenweitergabe** statt.
 
-This system is designed with privacy in mind:
+---
 
-- **MAC Address Hashing**: All MAC addresses are hashed using SHA-256 on the ESP32 before transmission
-- **No PII Storage**: Only hashed identifiers are stored and transmitted
-- **No Raw Packet Logging**: Raw 802.11 frames are never logged or stored
-- **Local Processing**: All data stays within your local network
+## 🤖 KI-Assistenz & Antigravity Hinweis
 
-## Installation
+Dieses Projekt wurde in enger Pair-Programming-Zusammenarbeit mit **Antigravity** (der agentischen KI-Entwicklungsumgebung von Google DeepMind) entwickelt. Von der Verfeinerung des C++ Promiscuous-Sniffings über die flimmerfreie ILI9341 Render-Engine bis hin zur Dual-Trilateration und dem WebSerial Flasher wurde der gesamte Code von Mensch und KI gemeinsam konzipiert, programmiert und getestet.
 
-### 1. Install ESP32 Rust Toolchain
+---
 
-Follow the [esp-rs installation guide](https://docs.espressif.com/projects/rust/book/getting-started/toolchain.html)
-Follow the [esp-idf-template installation guide](https://github.com/esp-rs/esp-idf-template?tab=readme-ov-file#prerequisites) if needed
+## 📜 Lizenz & Danksagung
 
+### Danksagung an die ursprünglichen Entwickler
+Dieses Projekt baut auf den Grundlagen und Ideen des Projekts [`esp32-wifi-sniffer`](https://github.com/patrickhaahr/esp32-wifi-sniffer) auf. 
 
-### 2. Clone the Repository
-    
-```bash
-git clone https://github.com/patrickhaahr/esp32-wifi-sniffer.git
-cd esp32-wifi-sniffer
-```
+Ein herzlicher Dank geht an die ursprünglichen Autoren und Ersteller:
+* **Patrick Haahr** ([@patrickhaahr](https://github.com/patrickhaahr))
+* **Bananainsane**
+* **FrostyCave**
 
-### 3. Generate TLS Certificates
+### GitHub Repository & Branches
+* Main Repository: [`https://github.com/TJRSchmidbauer/esp32-wifi-BLE-locator`](https://github.com/TJRSchmidbauer/esp32-wifi-BLE-locator)
+* Master Branch: CYD 2.8" Touch Display 2D Floorplan Edition
+* BLE-WLAN Branch: [`https://github.com/TJRSchmidbauer/esp32-wifi-BLE-locator/tree/BLE-WLAN`](https://github.com/TJRSchmidbauer/esp32-wifi-BLE-locator/tree/BLE-WLAN) (LilyGO T-Display 1.14" 90° Radar Edition)
 
-**Important**: Set your server IP in `.env` first, then generate certificates:
-
-```bash
-# Copy and configure environment file
-cp .env.example .env
-
-# Edit .env with your server IP (the machine running MQTT broker and web GUI)
-SERVER_IP=192.168.1.100 
-WIFI_SSID=your_network_name
-WIFI_PASS=your_network_password
-MQTT_BROKER=mqtts://192.168.1.100:8883  
-MQTT_USERNAME=elev1 
-MQTT_PASSWORD=password 
-STATION_ID=station1
-
-# Generate TLS certificates and MQTT password file
-./genssl.sh
-```
-
-The script creates:
-- `certs/ca.crt` - Root CA certificate (for ESP32 clients)
-- `certs/server.crt` - Server certificate (shared by MQTT broker and web GUI)
-- `certs/server.key` - Server private key
-- `mosquitto/config/passwd` - MQTT password file with user credentials
-
-### 4. Start MQTT Broker
-
-Start the included Mosquitto MQTT broker with TLS and authentication:
-
-```bash
-docker-compose up -d
-```
-
-The broker will listen on port 8883 with TLS encryption and username/password authentication.
-
-### 5. Verify MQTT TLS Connection with Authentication
-
-Test the MQTT broker with TLS and authentication:
-
-```bash
-# View all MQTT messages with TLS and authentication
-mosquitto_sub -h 192.168.1.100 -p 8883 --cafile ./certs/ca.crt -u elev1 -P password -t '#' -v
-```
-
-Replace `192.168.1.100` with your `SERVER_IP`. The credentials (`elev1`/`password`) are configured in your `.env` file.
-
-### 5. Configure Station Positions
-
-Edit `web/config.toml` to match your physical setup:
-
-```toml
-[room]
-width = 5.0              # Room width in meters
-height = 9.0             # Room height in meters   
-
-[[stations]]
-id = "station1"          # Must match STATION_ID in .env
-x = 0.5                  # X position in meters
-y = 0.5                  # Y position in meters
-label = "Station 1"
-rssi_at_1m = -45.0       # Calibration: RSSI at 1 meter
-path_loss_exponent = 3.0 # Indoor path loss (2.0-4.0)
-```
-
-## Usage
-
-### Flash ESP32 Stations
-
-For each ESP32, update the `STATION_ID` in `.env` and flash:
-
-```bash
-cargo fr
-```
-
-This command will:
-1. Build the firmware in release mode
-2. Flash to ESP32
-3. Open serial monitor
-
-**Note**: `cargo fr` is a custom alias defined in `.cargo/config.toml` that expands to `cargo run --release --bin esp32-wifi-sniffer`.
-
-
-### View Real-time Data
-
-```bash
-cargo web-*  # replace "*" with: l = Linux, m = MacOS, w = Windows
-```
-
-1. Open browser to `https://localhost:3000` (accept self-signed certificate warning)
-2. You'll see a 2D visualization of the room with:
-   - Station positions (fixed markers)
-   - Detected devices (moving circles)
-   - Device trails showing movement history
-   - RSSI values and signal strength indicators
-   - Real-time triangulation positioning
-
-## CLI Commands
-
-| Command     | Description                                 |
-|-------------|---------------------------------------------|
-| `cargo fr`    | Flash firmware to ESP32 with serial monitor |
-| `cargo br`    | Build ESP32 firmware only (release mode)    |
-| `cargo web-l` | Run web GUI (Linux)                         |
-| `cargo web-m` | Run web GUI (MacOS)                         |
-| `cargo web-w` | Run web GUI (Windows)                       |
-
-## How It Works
-
-### ESP32 Sniffer
-
-1. **WiFi Promiscuous Mode**: ESP32 enters monitor mode to capture 802.11 management frames
-2. **MAC Extraction**: Source MAC addresses are extracted from probe requests and data frames
-3. **Privacy Hashing**: MAC addresses are hashed with SHA-256 immediately
-4. **RSSI Measurement**: Signal strength (RSSI) is recorded for each frame
-5. **MQTT Publishing**: Hashed MAC + RSSI + timestamp sent to MQTT broker
-
-### Trilateration Algorithm
-
-The web dashboard uses advanced positioning:
-
-1. **RSSI to Distance**: Converts signal strength to estimated distance using log-distance path loss model:
-   ```
-   distance = 10^((rssi_at_1m - rssi) / (10 * path_loss_exponent))
-   ```
-
-2. **Gradient Descent**: Minimizes position error using weighted non-linear least squares
-
-3. **Position Smoothing**: Exponential moving average reduces jitter in real-time tracking
-
-4. **Fallback**: Uses weighted centroid when fewer than 3 stations detect a device
-
-## Configuration
-
-### ESP32 Sniffer Configuration
-
-Located in `src/sniffer.rs`:
-
-```rust
-const SEND_RATE: u32 = 10;  // Send 1 in every 10 packets to MQTT
-const CHANNEL_CAPACITY: usize = 32;  // Event queue size
-```
-
-### Triangulation Configuration
-
-Located in `web/config.toml` or programmatically:
-
-```toml
-[triangulation]
-smoothing_factor = 0.4           # 0.0 = no smoothing, 1.0 = no update
-max_iterations = 50              # Gradient descent iterations
-convergence_threshold = 0.01     # Stop when position change < 0.01m
-learning_rate = 0.5              # Gradient descent step size
-min_stations = 3                 # Minimum stations for trilateration
-max_reading_age_secs = 10        # Ignore readings older than 10s
-min_rssi = -90                   # Ignore weak signals
-max_distance = 50.0              # Ignore unrealistic distance estimates
-```
+### Lizenz
+Dieses Projekt steht unter den Bedingungen der **MIT-Lizenz** (übernommen aus dem Original-Repository).
