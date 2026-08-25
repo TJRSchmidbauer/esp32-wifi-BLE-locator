@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 Dual WiFi & BLE Locator — Web Flasher & Handbuch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- ESP Web Tools module -->
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --bg-card: rgba(22, 30, 49, 0.7);
+      --bg-card-hover: rgba(30, 42, 68, 0.85);
+      --border-glow: rgba(59, 130, 246, 0.3);
+      --primary: #3b82f6;
+      --primary-glow: #60a5fa;
+      --accent-cyan: #06b6d4;
+      --accent-purple: #8b5cf6;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 10% 10%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+        radial-gradient(at 90% 90%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(6, 182, 212, 0.08) 0px, transparent 50%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 2rem 1rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      position: relative;
+    }
+
+    .badge-bar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.35rem 1rem;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
+      border: 1px solid var(--border-glow);
+      color: var(--primary-glow);
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .ai-badge {
+      display: inline-block;
+      padding: 0.35rem 1rem;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(236, 72, 153, 0.25));
+      border: 1px solid rgba(236, 72, 153, 0.4);
+      color: #f472b6;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .github-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 1.1rem;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .github-link:hover {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: var(--primary-glow);
+      transform: translateY(-1px);
+    }
+
+    h1 {
+      font-size: 2.75rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #ffffff 0%, #93c5fd 50%, #c4b5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 1rem;
+    }
+
+    p.subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 750px;
+      margin: 0 auto;
+    }
+
+    .flasher-box {
+      background: linear-gradient(135deg, rgba(17, 24, 39, 0.9), rgba(30, 41, 59, 0.9));
+      border: 1px solid var(--border-glow);
+      border-radius: 1.5rem;
+      padding: 2.5rem;
+      margin-bottom: 3rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    .flasher-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .flasher-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .flasher-roles {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .role-item {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .role-item:hover {
+      border-color: var(--primary-glow);
+    }
+
+    .role-name {
+      font-weight: 600;
+      font-size: 1.05rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .role-hw {
+      font-size: 0.8rem;
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 1rem;
+    }
+
+    esp-web-install-button {
+      --esp-tools-button-color: var(--primary);
+      --esp-tools-button-text-color: #ffffff;
+      --esp-tools-button-border-radius: 0.75rem;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+    }
+
+    section {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 1.25rem;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    section h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: #ffffff;
+    }
+
+    section h2 span {
+      color: var(--accent-cyan);
+    }
+
+    .hw-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 0.95rem;
+    }
+
+    .hw-table th, .hw-table td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .hw-table th {
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    .hw-link {
+      color: var(--primary-glow);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .hw-link:hover {
+      text-decoration: underline;
+    }
+
+    .room-diagram {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border-glow);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--accent-cyan);
+      white-space: pre;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+
+    .legal-box {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-top: 1rem;
+    }
+
+    .legal-box h3 {
+      color: #fca5a5;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 4rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="badge-bar">
+        <div class="badge">Standalone Ortungssystem • 100% Autark</div>
+        <div class="ai-badge">🤖 Entwickelt mit Google Antigravity KI</div>
+        <a href="https://github.com/TJRSchmidbauer/esp32-wifi-BLE-locator/tree/BLE-WLAN" target="_blank" class="github-link">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          GitHub Repository (BLE-WLAN Branch)
+        </a>
+      </div>
+
+      <h1>ESP32 90 Grad Radar & Relativ-Ortung</h1>
+      <p class="subtitle">
+        Autonome 2D-Triangulation von WLAN Probe Requests (Kanal 1–13) & Bluetooth Low Energy (BLE) Signalen mit Messung der Entfernung direkt zu deinen Händen!
+      </p>
+    </header>
+
+    <!-- WEB SERIAL FLASHER BOX -->
+    <div class="flasher-box" id="flasher">
+      <div class="flasher-header">
+        <div>
+          <div class="flasher-title">⚡ 1-Klick WebSerial Flasher</div>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Verbinde deine ESP32 Platinen nacheinander per USB und flashe per Klick (Chrome / Edge / Brave Browser erforderlich).
+          </p>
+        </div>
+      </div>
+
+      <div class="flasher-roles">
+        <!-- Station 1 -->
+        <div class="role-item">
+          <div>
+            <div class="role-name">Station 1 (Ecke A)</div>
+            <div class="role-hw">ESP32-C3 Super Mini</div>
+          </div>
+          <esp-web-install-button manifest="./manifest_station1.json">
+            <button slot="activate" class="btn">Flashen 🔌</button>
+          </esp-web-install-button>
+        </div>
+
+        <!-- Station 2 -->
+        <div class="role-item">
+          <div>
+            <div class="role-name">Station 2 (Ecke B)</div>
+            <div class="role-hw">ESP32-C3 Super Mini</div>
+          </div>
+          <esp-web-install-button manifest="./manifest_station2.json">
+            <button slot="activate" class="btn">Flashen 🔌</button>
+          </esp-web-install-button>
+        </div>
+
+        <!-- Station 3 -->
+        <div class="role-item">
+          <div>
+            <div class="role-name">Station 3 (Ecke C)</div>
+            <div class="role-hw">ESP32-C3 Super Mini</div>
+          </div>
+          <esp-web-install-button manifest="./manifest_station3.json">
+            <button slot="activate" class="btn">Flashen 🔌</button>
+          </esp-web-install-button>
+        </div>
+
+        <!-- T-Display Tracker -->
+        <div class="role-item" style="border-color: var(--accent-purple);">
+          <div>
+            <div class="role-name">90° Radar Tracker</div>
+            <div class="role-hw">TENSTAR T-Display 1.14"</div>
+          </div>
+          <esp-web-install-button manifest="./manifest_tracker.json">
+            <button slot="activate" class="btn">Flashen 🎯</button>
+          </esp-web-install-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BENÖTIGTE HARDWARE MIT KAUFLINKS UND 3D-DRUCK GEHÄUSE -->
+    <section>
+      <h2><span>🛒</span> Benötigte Hardware & 3D-Druck Gehäuse</h2>
+      <table class="hw-table">
+        <thead>
+          <tr>
+            <th>Hardware-Modell</th>
+            <th>Rolle im System</th>
+            <th>AliExpress Kauf-Link</th>
+            <th>🖨️ 3D-Druck Gehäuse</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>TENSTAR / LilyGO T-Display ESP32</strong></td>
+            <td>Handheld Peilsender mit 1.14" IPS Display</td>
+            <td><a href="https://de.aliexpress.com/item/1005005970553639.html?gatewayAdapt=glo2deu" target="_blank" class="hw-link">🛒 T-Display auf AliExpress kaufen</a></td>
+            <td><a href="https://makerworld.com/de/models/1921314-lilygo-t-display-1-14-case#profileId-2061606" target="_blank" class="hw-link">📦 LilyGO T-Display 1.14" Case (MakerWorld)</a></td>
+          </tr>
+          <tr>
+            <td><strong>3x ESP32-C3 Super Mini</strong></td>
+            <td>Ortungsstationen in 3 Raum-Ecken</td>
+            <td><a href="https://de.aliexpress.com/item/1005006599448997.html?spm=a2g0o.order_list.order_list_main.55.514f5c5fRjT0iT&gatewayAdapt=glo2deu" target="_blank" class="hw-link">🛒 ESP32-C3 Super Mini kaufen</a></td>
+            <td><a href="https://makerworld.com/de/models/2851590-esp32-s3-supermini-case-snap-fit-options#profileId-3180623" target="_blank" class="hw-link">📦 SuperMini Snap-Fit Case (MakerWorld)</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- DIE RAUM-AUFSTELLUNG & EMPFOHLENE RAUMGRÖSSEN -->
+    <section>
+      <h2><span>📐</span> Raum-Aufstellung & Raumkalibrierung (Taste 2)</h2>
+      <p style="color: var(--text-muted);">
+        Die drei Stationen bilden ein Ortungs-Dreieck im Raum. Per Druck auf <strong>Taste 2</strong> führt das T-Display eine 3-sekündige automatische Raumkalibrierung durch:
+      </p>
+
+      <div class="room-diagram">
+                         Station 2 (Vorne / Mitte)
+                                  [ 📡 ]
+                                    ▲
+                                   / \
+                                  /   \
+                                 /     \
+                                /   📱  \  ◄── Gesuchtes Zielgerät
+                               /   (•)   \     (wird trianguliert)
+                              /           \
+                             /   ┌─────┐   \
+                            /    │T-Dis│    \  ◄── Du mit dem T-Display
+                           /     └─────┘     \     (Blickrichtung zu Station 2)
+                          /                   \
+                         /                     \
+                        ▼                       ▼
+                     [ 📡 ]                   [ 📡 ]
+                Station 1 (Links)        Station 3 (Rechts)
+      </div>
+
+      <h3 style="color: #fff; font-size: 1.1rem; margin-top: 1.5rem; margin-bottom: 0.75rem;">📏 Empfohlene Raumgrößen & Präzision:</h3>
+      <table class="hw-table">
+        <thead>
+          <tr>
+            <th>Raumgröße</th>
+            <th>Stationen-Abstand</th>
+            <th>Ortungsverhalten & Genauigkeit</th>
+            <th>Bewertung</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Unter 2m × 2m</strong> <em>(&lt; 4 m²)</em></td>
+            <td>&lt; 1.5 m</td>
+            <td>⚠️ Signale überlagern sich. Das Radar zeigt das Ziel meist nur starr in der Mitte an.</td>
+            <td>❌ Nicht empfohlen</td>
+          </tr>
+          <tr>
+            <td><strong>3m × 3m</strong> <em>(9 m²)</em></td>
+            <td>≈ 2.5 m</td>
+            <td>🟢 Geringste sinnvolle Mindestgröße: Triangulation funktioniert gut. Präzision ca. ±0.5m bis ±0.8m.</td>
+            <td>✅ <strong>Mindestgröße</strong></td>
+          </tr>
+          <tr>
+            <td><strong>4m × 5m</strong> <em>(20 m²)</em></td>
+            <td>≈ 3.5 m</td>
+            <td>🌟 Optimaler Bereich (Standard-Zimmer / Büro): Perfekte Signaltrennung. Sehr gute "Heiß/Kalt"-Führung!</td>
+            <td>⭐ <strong>Ideal</strong></td>
+          </tr>
+          <tr>
+            <td><strong>6m × 8m</strong> <em>(48 m²)</em></td>
+            <td>≈ 5.5 m</td>
+            <td>🟢 Sehr gut (Großer Raum / Halle): Volle Funktion bis ca. 10m Reichweite pro Station.</td>
+            <td>✅ Sehr gut</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- KI ENTWICKLUNGS HINWEIS -->
+    <section style="border-color: rgba(236, 72, 153, 0.3);">
+      <h2><span>🤖</span> Entwickelt mit Google Antigravity KI</h2>
+      <p style="color: var(--text-muted);">
+        Dieses Repository und das gesamte C++ / WebSerial-System werden in enger Pair-Programming-Zusammenarbeit mit <strong>Google Antigravity</strong> (einer fortschrittlichen agentischen KI von Google DeepMind) konzipiert, programmiert, optimiert und dokumentiert.
+      </p>
+    </section>
+
+    <footer>
+      ESP32 WiFi & BLE Locator • Entwickelt mit Google Antigravity KI • <a href="https://github.com/TJRSchmidbauer/esp32-wifi-BLE-locator/tree/BLE-WLAN" target="_blank" style="color: var(--primary-glow); text-decoration: none;">GitHub Repository (Branch: BLE-WLAN)</a> • MIT License
+    </footer>
+  </div>
+
+</body>
+</html>

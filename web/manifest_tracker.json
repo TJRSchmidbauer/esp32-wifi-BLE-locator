@@ -1,0 +1,13 @@
+{
+  "name": "ESP32 WiFi & BLE Locator - Peilsender (T-Display)",
+  "version": "1.0.0",
+  "new_install_prompt_erase": false,
+  "builds": [
+    {
+      "chipFamily": "ESP32",
+      "parts": [
+        { "path": "firmware/tracker.bin", "offset": 0 }
+      ]
+    }
+  ]
+}

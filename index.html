@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 Dual WiFi & BLE Locator — Web Flasher & Handbuch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- ESP Web Tools module -->
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --bg-card: rgba(22, 30, 49, 0.7);
+      --bg-card-hover: rgba(30, 42, 68, 0.85);
+      --border-glow: rgba(59, 130, 246, 0.3);
+      --primary: #3b82f6;
+      --primary-glow: #60a5fa;
+      --accent-cyan: #06b6d4;
+      --accent-purple: #8b5cf6;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 10% 10%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+        radial-gradient(at 90% 90%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(6, 182, 212, 0.08) 0px, transparent 50%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 2rem 1rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      position: relative;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.35rem 1rem;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
+      border: 1px solid var(--border-glow);
+      color: var(--primary-glow);
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: 2.75rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #ffffff 0%, #93c5fd 50%, #c4b5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 1rem;
+    }
+
+    p.subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .flasher-box {
+      background: linear-gradient(135deg, rgba(17, 24, 39, 0.9), rgba(30, 41, 59, 0.9));
+      border: 1px solid var(--border-glow);
+      border-radius: 1.5rem;
+      padding: 2.5rem;
+      margin-bottom: 3rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    .flasher-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .flasher-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .flasher-roles {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .role-item {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .role-item:hover {
+      border-color: var(--primary-glow);
+    }
+
+    .role-name {
+      font-weight: 600;
+      font-size: 1.05rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .role-hw {
+      font-size: 0.8rem;
+      color: var(--accent-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 1rem;
+    }
+
+    esp-web-install-button {
+      --esp-tools-button-color: var(--primary);
+      --esp-tools-button-text-color: #ffffff;
+      --esp-tools-button-border-radius: 0.75rem;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+    }
+
+    section {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 1.25rem;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    section h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: #ffffff;
+    }
+
+    section h2 span {
+      color: var(--accent-cyan);
+    }
+
+    .step-list {
+      list-style: none;
+      counter-reset: steps;
+    }
+
+    .step-list li {
+      counter-increment: steps;
+      position: relative;
+      padding-left: 3.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .step-list li::before {
+      content: counter(steps);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--accent-purple));
+      color: #ffffff;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+
+    .step-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #ffffff;
+      margin-bottom: 0.25rem;
+    }
+
+    .legal-box {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-top: 1rem;
+    }
+
+    .legal-box h3 {
+      color: #fca5a5;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 4rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="badge">Standalone Ortungssystem • 100% Autark</div>
+      <h1>ESP32 WiFi & BLE Peilsender</h1>
+      <p class="subtitle">
+        Autonome 2D-Triangulation von WLAN Probe Requests & Bluetooth Low Energy (BLE) Signalen mit 3 Stationen und einem T-Display Peilsender mit Kompass-Zeiger.
+      </p>
+    </header>
+
+    <!-- WEB SERIAL FLASHER BOX -->
+    <div class="flasher-box" id="flasher">
+      <div class="flasher-header">
+        <div>
+          <div class="flasher-title">⚡ 1-Klick WebSerial Flasher</div>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Verbinde deinen ESP32 per USB-Kabel und wähle die passende Firmware-Rolle aus (WebSerial im Chrome / Edge / Brave Browser erforderlich).
+          </p>
+        </div>
+      </div>
+
+      <div class="flasher-roles">
+        <!-- Station 1 -->
+        <div class="role-item">
+          <div>
+            <div class="role-name">Station 1 (Ecke A)</div>
+            <div class="role-hw">ESP32-C3 Super Mini</div>
+          </div>
+          <esp-web-install-button manifest="./web/manifest_station1.json">
+            <button slot="activate" class="btn">Flashen 🔌</button>
+          </esp-web-install-button>
+        </div>
+
+        <!-- Station 2 -->
+        <div class="role-item">
+          <div>
+            <div class="role-name">Station 2 (Ecke B)</div>
+            <div class="role-hw">ESP32-C3 Super Mini</div>
+          </div>
+          <esp-web-install-button manifest="./web/manifest_station2.json">
+            <button slot="activate" class="btn">Flashen 🔌</button>
+          </esp-web-install-button>
+        </div>
+
+        <!-- Station 3 -->
+        <div class="role-item">
+          <div>
+            <div class="role-name">Station 3 (Ecke C)</div>
+            <div class="role-hw">ESP32-C3 Super Mini</div>
+          </div>
+          <esp-web-install-button manifest="./web/manifest_station3.json">
+            <button slot="activate" class="btn">Flashen 🔌</button>
+          </esp-web-install-button>
+        </div>
+
+        <!-- T-Display Tracker -->
+        <div class="role-item" style="border-color: var(--accent-purple);">
+          <div>
+            <div class="role-name">Peilsender (Tracker)</div>
+            <div class="role-hw">TENSTAR T-Display 1.14"</div>
+          </div>
+          <esp-web-install-button manifest="./web/manifest_tracker.json">
+            <button slot="activate" class="btn">Flashen 🎯</button>
+          </esp-web-install-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DIE GRUNDIDEE -->
+    <section>
+      <h2><span>💡</span> Die Grundidee & Funktionsweise</h2>
+      <p>
+        Dieses Projekt ermöglicht die <strong>autonome Ortung von verlorenen oder aktiven Sendern</strong> (Smartphones, Smartwatches, AirTags, BLE-Beacons) in geschlossenen Räumen – völlig <strong>ohne PC, ohne Server und ohne WLAN-Router!</strong>
+      </p>
+      <div style="margin-top: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+        <div style="background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: 0.75rem; border-left: 4px solid var(--accent-cyan);">
+          <strong style="color: #fff;">1. 3x ESP32-C3 in den Ecken</strong>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">
+            Die drei kleinen ESP32-C3 Super Mini Platinen werden in drei Ecken des Raums platziert. Sie hören kontinuierlich auf WLAN Probe Requests (2.4 GHz) und Bluetooth Advertisements.
+          </p>
+        </div>
+
+        <div style="background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: 0.75rem; border-left: 4px solid var(--accent-purple);">
+          <strong style="color: #fff;">2. Direktfunk per ESP-NOW</strong>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">
+            Die Stationen senden die gemessenen Signalstärken (RSSI) blitzschnell per latenzfreiem ESP-NOW Direktfunk an das TENSTAR T-Display Handheld-Board.
+          </p>
+        </div>
+
+        <div style="background: rgba(0,0,0,0.2); padding: 1.25rem; border-radius: 0.75rem; border-left: 4px solid var(--success);">
+          <strong style="color: #fff;">3. 2D-Kompass-Zeiger auf dem LCD</strong>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">
+            Der TENSTAR T-Display ESP32 berechnet die Triangulation im Raum und zeichnet einen grafischen Kompass-Zeiger auf sein 1.14" IPS Display, der direkt auf das gesuchte Gerät zeigt!
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- BEDIENUNGSANLEITUNG -->
+    <section>
+      <h2><span>📖</span> Schritt-für-Schritt Bedienungsanleitung</h2>
+      <ol class="step-list">
+        <li>
+          <div class="step-title">Hardware vorbereiten & Flashen</div>
+          Verbinde die drei ESP32-C3 Super Minis nacheinander per USB mit deinem Computer. Klicke oben im WebSerial-Flasher auf "Flashen 🔌" für Station 1, 2 und 3. Verbinde danach das TENSTAR T-Display Board und flashe die Peilsender-Firmware.
+        </li>
+        <li>
+          <div class="step-title">Stationen in den Ecken aufstellen</div>
+          Platziere die drei ESP32-C3 Stationen in drei Ecken deines Raums (z. B. auf dem Boden oder auf Tischen). Schließe sie einfach an eine Powerbank oder ein USB-Steckernetzteil an. Sie verbinden sich automatisch per Funk.
+        </li>
+        <li>
+          <div class="step-title">T-Display Handheld einschalten</div>
+          Schalte den TENSTAR T-Display Peilsender ein. Beim Start zeigt das Display kurz den Selbsttest an und meldet, sobald alle 3 Ecken-Stationen per Funk verbunden sind.
+        </li>
+        <li>
+          <div class="step-title">Zielgerät suchen & Pfeil folgen</div>
+          Mit den beiden Gehäuse-Tasten am T-Display kannst du zwischen den erkannten Geräten blättern. Das Display zeigt dir:
+          <ul style="margin-left: 1.25rem; margin-top: 0.5rem; color: var(--text-muted);">
+            <li>🧭 <strong>Kompass-Zeiger</strong>: Zeigt in die Richtung im Raum, wo sich das Gerät befindet.</li>
+            <li>📏 <strong>Entfernung</strong>: Schätzung der Distanz in Metern.</li>
+            <li>📶 <strong>WiFi & BLE RSSI</strong>: Signalstärke in dBm.</li>
+          </ul>
+        </li>
+      </ol>
+    </section>
+
+    <!-- RECHTLICHES UND DATENSCHUTZ -->
+    <section>
+      <h2><span>⚖️</span> Rechtliche Hinweise & Datenschutz (DSGVO)</h2>
+      <p style="color: var(--text-muted);">
+        Da WLAN- und Bluetooth-Signale auch von Geräten anderer Personen ausgesendet werden können, ist dieses System streng nach den Grundsätzen der **Privacy-by-Design** und der Europäischen Datenschutz-Grundverordnung (**DSGVO / GDPR**) konzipiert.
+      </p>
+
+      <div style="margin-top: 1.25rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); padding: 1.25rem; border-radius: 0.75rem;">
+          <strong style="color: #6ee7b7;">🔒 SHA-256 Anonymisierung am Chip</strong>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+            MAC-Adressen werden unmittelbar beim Empfang auf dem ESP32-Chip per SHA-256 kryptografisch gehasht. Es werden <strong>niemals unverschlüsselte Klardaten oder Paketinhalte</strong> übertragen oder im Speicher gehalten.
+          </p>
+        </div>
+
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); padding: 1.25rem; border-radius: 0.75rem;">
+          <strong style="color: #6ee7b7;">🏠 Lokale Funkverarbeitung</strong>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+            Alle Funkdaten verbleiben ausschließlich im geschlossenen ESP-NOW Direktfunkraum. Es erfolgt <strong>keine Übertragung ins Internet</strong> oder an externe Server.
+          </p>
+        </div>
+      </div>
+
+      <div class="legal-box">
+        <h3><span>⚠️</span> Bestimmungsgemäßer Gebrauch</h3>
+        <p style="font-size: 0.88rem; color: #fecaca;">
+          Dieses Ortungssystem ist ausschließlich für den <strong>privaten Gebrauch in eigenen Räumlichkeiten</strong> (z. B. zum Wiederfinden von eigenen Schlüsseln, Smart-Tags, Bluetooth-Headsets oder Testgeräten) bestimmt. Der Einsatz zur systematischen Überwachung Dritter in öffentlichen Räumen ohne deren Einwilligung ist rechtlich unzulässig.
+        </p>
+      </div>
+    </section>
+
+    <footer>
+      ESP32 WiFi & BLE Locator • Open Source Rust & ESP-IDF Implementation • MIT License
+    </footer>
+  </div>
+
+</body>
+</html>

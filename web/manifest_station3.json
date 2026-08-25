@@ -1,0 +1,13 @@
+{
+  "name": "ESP32 WiFi & BLE Locator - Station 3",
+  "version": "1.0.0",
+  "new_install_prompt_erase": false,
+  "builds": [
+    {
+      "chipFamily": "ESP32-C3",
+      "parts": [
+        { "path": "firmware/station3.bin", "offset": 0 }
+      ]
+    }
+  ]
+}

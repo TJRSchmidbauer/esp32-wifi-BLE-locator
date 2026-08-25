@@ -15,6 +15,12 @@ name = "web-gui"
 path = "src/bin/web-gui.rs"
 required-features = ["web-gui"]
 
+[[bin]]
+name = "t-display-tracker"
+path = "src/bin/t-display-tracker.rs"
+required-features = ["esp32"]
+
+
 [profile.release]
 opt-level = "s"
 
@@ -35,6 +41,7 @@ rumqttc = ["dep:rumqttc"]
 log = "0.4"
 anyhow = "1.0.100"
 sha2 = { version = "0.10", default-features = false }
+bincode = "1.3"
 dotenvy = "0.15.7"
 
 # ESP32-specific dependencies

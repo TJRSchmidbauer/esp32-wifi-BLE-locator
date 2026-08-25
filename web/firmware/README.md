@@ -1,0 +1,1 @@
+# Web Firmware binaries directory
