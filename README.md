@@ -1,6 +1,6 @@
 # ESP32 Dual WiFi & BLE 2D Raum-Ortungssystem (CYD Touch Edition)
 
-Ein autarkes, datenschutzkonformes Ortungssystem auf Basis von C++ (Arduino ESP32 Core) für den ESP32. Das System erfasst zeitgleich **WLAN Probe Requests über das gesamte 13-Kanal-Spektrum** und **Bluetooth Low Energy (BLE) Advertisements** (Smartphones, Smartwatches, In-Ear-Headsets, AirTags oder BLE Beacons) und ermöglicht die **starre 2D-Raum-Ortung** auf einem **2.8" CYD Touch-Display (ESP32-2432S028)** – ganz **ohne PC, ohne Server und ohne WLAN-Router!**
+Ein autarkes, datenschutzkonformes Ortungssystem auf Basis von C++ (Arduino ESP32 Core) für den ESP32. Das System erfasst zeitgleich **WLAN Probe Requests & Datenframes auf Kanal 1** und **Bluetooth Low Energy (BLE) Advertisements** (Smartphones, Smartwatches, In-Ear-Headsets, AirTags oder BLE Beacons) und ermöglicht die **starre 2D-Raum-Ortung** auf einem **2.8" CYD Touch-Display (ESP32-2432S028)** – ganz **ohne PC, ohne Server und ohne WLAN-Router!**
 
 ---
 
@@ -20,7 +20,7 @@ Ein autarkes, datenschutzkonformes Ortungssystem auf Basis von C++ (Arduino ESP3
 | Komponente | Rolle im System | Produkt-Link (AliExpress) | 🖨️ 3D-Druck Gehäuse (MakerWorld) |
 | :--- | :--- | :--- | :--- |
 | **ESP32 CYD (Cheap Yellow Display ESP32-2432S028)** | Handheld 2.8" ILI9341 Color LCD Display | 🔗 [AliExpress CYD Display kaufen](https://de.aliexpress.com/item/1005006599448997.html) | 📦 [ESP32 CYD 2.8" Snap-Fit Case (MakerWorld)](https://makerworld.com/de/models/3180623) |
-| **3x ESP32-C3 Super Mini** | Ecken-Stationen (13-Kanal WiFi + BLE Sniffer) | 🔗 [AliExpress ESP32-C3 Super Mini kaufen](https://de.aliexpress.com/item/1005006599448997.html) | 📦 [SuperMini Snap-Fit Case (MakerWorld)](https://makerworld.com/de/models/2851590-esp32-s3-supermini-case-snap-fit-options#profileId-3180623) |
+| **3x ESP32-C3 Super Mini** | Ecken-Stationen (WiFi Kanal 1 + BLE Sniffer) | 🔗 [AliExpress ESP32-C3 Super Mini kaufen](https://de.aliexpress.com/item/1005006599448997.html) | 📦 [SuperMini Snap-Fit Case (MakerWorld)](https://makerworld.com/de/models/2851590-esp32-s3-supermini-case-snap-fit-options#profileId-3180623) |
 
 ---
 
@@ -91,12 +91,34 @@ Das System besteht aus genau **4 ESP32-Platinen**:
 * 🖐️ **2.8" CYD Touch-Display Unterstützung**: Optimiert für das **ESP32-2432S028 CYD (Cheap Yellow Display)** mit 320x240 Farbbildschirm und XPT2046 SPI Touch Controller.
 * 🗺️ **Starre 2D-Raumplan-Darstellung**: Stellt den Raum mit Wänden, Stationen-Icons und Blips (🟢 WLAN, 🟣 BLE, 🟡 Ziel) visuell dar.
 * 🎯 **Interaktive Touch-Auswahl**: Tippen direkt auf ein Blip auf dem Touchscreen wählt das Gerät aus. Die Touch-Buttons `[NEXT]` und `[CALIB]` steuern die Zielwahl und Raumkalibrierung.
-* 📶 **Full-Spectrum Channel Hopping (Kanal 1–13)**: Erfasst alle WLAN-Kanäle 1 bis 13 und scannte BLE mit 97,5 % Duty-Cycle.
+* 📶 **Fester ESP-NOW-Kanal 1 + BLE-Scan mit 50 % Duty-Cycle**: Stationen und Peilsender funken auf demselben Kanal, damit die Messwerte zuverlässig ankommen (siehe Hinweis unten).
 * 📏 **"Heiß / Kalt"-Entfernung zu deinen Händen**: Misst die direkte Relativ-Distanz zwischen deinen Händen und dem Zielgerät.
 * 🛡️ **Paket-Wiederholungs-Filter (Hit-Count >= 3)**: Erfordert mindestens 3 empfangene Pakete und $\ge 2$ Stationen, um Phantom-Signale zu 100% auszufiltern.
 * 📺 **Flimmerfreie Delta-Render-Engine**: Vermeidet zeilenweises SPI-Nachladen – das Bild steht absolut starr und gestochen scharf.
 * 💡 **RGB-LED Stummschaltung**: Schaltet die störende Rückseiten-LED des CYD-Boards komplett aus.
 * 🔒 **Privacy-First (DSGVO-Konform)**: Eindeutige MAC-Adressen werden noch **direkt auf dem ESP32-Chip per SHA-256 gehasht**. Es werden keine Klardaten oder Paketinhalte übertragen oder gespeichert.
+
+---
+
+## 🛠️ Fix (v1.0.1 Stations-Firmware): Peilsender findet keine Stationen
+
+Der Peilsender (CYD / T-Display) zählt eine Station nur als aktiv, wenn innerhalb von 5 s ein ESP-NOW-Paket von ihr ankommt. Er hört dabei fest auf **WLAN-Kanal 1**. Die Stationen der Version 1.0.0 haben ihre Pakete aber nur selten auf diesem Kanal gesendet:
+
+1. **Channel Hopping 1–13 (150 ms je Kanal)** – ESP-NOW sendet immer auf dem aktuellen Kanal, nur ca. 1/13 der Pakete lag auf Kanal 1.
+2. **BLE-Scan mit 97,5 % Duty-Cycle** (`setInterval(40)` / `setWindow(39)`) – der ESP32-C3 hat nur ein Funkteil, WLAN/ESP-NOW bekam kaum Sendezeit.
+3. **Jedes empfangene WLAN-Frame wurde weitergeleitet**, auch Router-Beacons und die ESP-NOW-Pakete der anderen Stationen bzw. der `tracker_ping` – die Stationen haben sich so gegenseitig „hochgeschaukelt“.
+
+Die Stations-Firmware `station1–3.bin` (v1.0.1, identisch mit der T-Display-Edition im Branch `BLE-WLAN`) wurde deshalb gepatcht:
+
+| Änderung | Vorher | Nachher |
+| :--- | :--- | :--- |
+| WLAN-Kanal | Hopping 1–13 | fest Kanal 1 (gleicher Kanal wie Peilsender) |
+| Weitergeleitete Frames | alle (inkl. Beacons, ESP-NOW) | nur Frame-Control-Byte < `0x80` (Probe Requests, Datenframes); Beacons/Action-Frames/ESP-NOW werden verworfen |
+| BLE-Scan-Fenster | 39/40 (97,5 %) | 20/40 (50 %) |
+
+Paketformat (40 Byte) und Peilsender-Firmware (CYD) sind unverändert. **Alle drei Stationen neu flashen**, das CYD muss nicht neu geflasht werden.
+
+> Hinweis für den Arduino-Sketch: Die gleichen Änderungen sollten auch im Quellcode der Stationen nachgezogen werden (`esp_wifi_set_channel(1, …)` statt Hopping, im Promiscuous-Callback `if (pkt->payload[0] & 0x80) return;`, `pBLEScan->setWindow(20)`).
 
 ---
 
