@@ -20,7 +20,7 @@ Ein autarkes, datenschutzkonformes Ortungssystem auf Basis von C++ (Arduino ESP3
 | Komponente | Rolle im System | Produkt-Link (AliExpress) | 🖨️ 3D-Druck Gehäuse (MakerWorld) |
 | :--- | :--- | :--- | :--- |
 | **TENSTAR / LilyGO T-Display ESP32** | Handheld Peilsender mit 1.14" IPS LCD Display | 🔗 [AliExpress T-Display kaufen](https://de.aliexpress.com/item/1005005970553639.html?gatewayAdapt=glo2deu) | 📦 [LilyGO T-Display 1.14" Case (MakerWorld)](https://makerworld.com/de/models/1921314-lilygo-t-display-1-14-case#profileId-2061606) |
-| **3x ESP32-C3 Super Mini** | Ecken-Stationen (13-Kanal WiFi + BLE Sniffer) | 🔗 [AliExpress ESP32-C3 Super Mini kaufen](https://de.aliexpress.com/item/1005006599448997.html?spm=a2g0o.order_list.order_list_main.55.514f5c5fRjT0iT&gatewayAdapt=glo2deu) | 📦 [SuperMini Snap-Fit Case (MakerWorld)](https://makerworld.com/de/models/2851590-esp32-s3-supermini-case-snap-fit-options#profileId-3180623) |
+| **3x ESP32-C3 Super Mini** | Ecken-Stationen (WiFi Kanal 1 + BLE Sniffer) | 🔗 [AliExpress ESP32-C3 Super Mini kaufen](https://de.aliexpress.com/item/1005006599448997.html?spm=a2g0o.order_list.order_list_main.55.514f5c5fRjT0iT&gatewayAdapt=glo2deu) | 📦 [SuperMini Snap-Fit Case (MakerWorld)](https://makerworld.com/de/models/2851590-esp32-s3-supermini-case-snap-fit-options#profileId-3180623) |
 
 ---
 
