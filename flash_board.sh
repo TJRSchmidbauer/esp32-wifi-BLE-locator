@@ -1,5 +1,6 @@
 #!/bin/bash
-# Convenient Flashing Script for ESP32-C3 Super Mini & TENSTAR T-Display
+# Convenient Flashing Script for ESP32-C3 Super Mini, TENSTAR T-Display & CYD
+# Rollen: station1 | station2 | station3 | tracker (T-Display) | tracker_cyd (CYD)
 
 PORT=${2:-/dev/ttyACM0}
 ROLE=${1:-station1}
@@ -21,6 +22,6 @@ if [ ! -f "$BIN_FILE" ]; then
 fi
 
 echo "🚀 Flashe $ROLE auf $PORT ..."
-~/.local/bin/esptool --port "$PORT" --chip esp32c3 write_flash 0x0 "$BIN_FILE"
+~/.local/bin/esptool --port "$PORT" write_flash 0x0 "$BIN_FILE"
 
 echo "✅ Fertig! $ROLE wurde erfolgreich auf $PORT geflasht."

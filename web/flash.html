@@ -355,10 +355,21 @@
         <!-- T-Display Tracker -->
         <div class="role-item" style="border-color: var(--accent-purple);">
           <div>
-            <div class="role-name">90° Radar Tracker</div>
+            <div class="role-name">Peilsender T-Display 90° Radar</div>
             <div class="role-hw">TENSTAR T-Display 1.14"</div>
           </div>
           <esp-web-install-button manifest="./manifest_tracker.json">
+            <button slot="activate" class="btn">Flashen 🎯</button>
+          </esp-web-install-button>
+        </div>
+
+        <!-- CYD Tracker -->
+        <div class="role-item" style="border-color: var(--accent-purple);">
+          <div>
+            <div class="role-name">Peilsender CYD 2D Raumplan</div>
+            <div class="role-hw">ESP32 CYD 2.8" Touch (ESP32-2432S028)</div>
+          </div>
+          <esp-web-install-button manifest="./manifest_tracker_cyd.json">
             <button slot="activate" class="btn">Flashen 🎯</button>
           </esp-web-install-button>
         </div>

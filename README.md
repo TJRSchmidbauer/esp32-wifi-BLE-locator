@@ -1,13 +1,15 @@
-# ESP32 Dual WiFi & BLE 90° Radar & Relativ-Ortungssystem (T-Display Edition)
+# ESP32 Dual WiFi & BLE 90° Radar & Relativ-Ortungssystem (T-Display & CYD)
 
 Ein autarkes, datenschutzkonformes Ortungssystem auf Basis von C++ (Arduino ESP32 Core) für den ESP32. Das System erfasst zeitgleich **WLAN Probe Requests & Datenframes auf Kanal 1** und **Bluetooth Low Energy (BLE) Advertisements** (Smartphones, Smartwatches, In-Ear-Headsets, AirTags oder BLE Beacons) und ermöglicht die **2D-Relativ-Ortung im Raum** (Messung der Entfernung direkt zu deinen Händen!) sowie die **Richtungsführung per 90° Sektor-Radar** auf einem **1.14" LilyGO / TENSTAR T-Display** – ganz **ohne PC, ohne Server und ohne WLAN-Router!**
 
 ---
 
-### 💡 Verfügbare Hardware-Editionen im Repository
+### 💡 Verfügbare Peilsender im Repository
 
-* 🎯 **`BLE-WLAN` Branch (Diese Branch)**: Entwickelt für das **1.14" LilyGO / TENSTAR T-Display ESP32** mit 90° Sektor-Radar und dynamischer Blickrichtungs-Führung.
-* 📱 **[`master` Branch](https://github.com/TJRSchmidbauer/esp32-wifi-BLE-locator)**: Entwickelt für das **2.8" CYD Touch-Display (ESP32-2432S028)** mit 320x240 LCD, starrem 2D-Raumplan, interaktiver Touch-Geräteauswahl und Touch-Kalibrierung.
+Beide Peilsender nutzen **dieselben 3 Stationen** (ESP32-C3 Super Mini) und werden über dieselbe Flash-Seite geflasht – du brauchst nur einen davon:
+
+* 🎯 **T-Display Edition** (`tracker.bin`): Für das **1.14" LilyGO / TENSTAR T-Display ESP32** mit 90° Sektor-Radar und dynamischer Blickrichtungs-Führung.
+* 📱 **CYD Edition** (`tracker_cyd.bin`): Für das **2.8" CYD Touch-Display (ESP32-2432S028)** mit 320x240 LCD, starrem 2D-Raumplan, interaktiver Touch-Geräteauswahl (`[NEXT]` / `[CALIB]`) und Touch-Kalibrierung (siehe [CYD-Anzeige](#-display-anzeige-auf-dem-cyd-28-320x240-ili9341-lcd)).
 
 ---
 
@@ -20,6 +22,7 @@ Ein autarkes, datenschutzkonformes Ortungssystem auf Basis von C++ (Arduino ESP3
 | Komponente | Rolle im System | Produkt-Link (AliExpress) | 🖨️ 3D-Druck Gehäuse (MakerWorld) |
 | :--- | :--- | :--- | :--- |
 | **TENSTAR / LilyGO T-Display ESP32** | Handheld Peilsender mit 1.14" IPS LCD Display | 🔗 [AliExpress T-Display kaufen](https://de.aliexpress.com/item/1005005970553639.html?gatewayAdapt=glo2deu) | 📦 [LilyGO T-Display 1.14" Case (MakerWorld)](https://makerworld.com/de/models/1921314-lilygo-t-display-1-14-case#profileId-2061606) |
+| **ESP32 CYD (ESP32-2432S028)** *(alternativ zum T-Display)* | Handheld 2.8" ILI9341 Touch-Display | 🔗 [AliExpress CYD Display kaufen](https://de.aliexpress.com/item/1005006599448997.html) | 📦 [ESP32 CYD 2.8" Snap-Fit Case (MakerWorld)](https://makerworld.com/de/models/3180623) |
 | **3x ESP32-C3 Super Mini** | Ecken-Stationen (WiFi Kanal 1 + BLE Sniffer) | 🔗 [AliExpress ESP32-C3 Super Mini kaufen](https://de.aliexpress.com/item/1005006599448997.html?spm=a2g0o.order_list.order_list_main.55.514f5c5fRjT0iT&gatewayAdapt=glo2deu) | 📦 [SuperMini Snap-Fit Case (MakerWorld)](https://makerworld.com/de/models/2851590-esp32-s3-supermini-case-snap-fit-options#profileId-3180623) |
 
 ---
@@ -89,9 +92,32 @@ Ein autarkes, datenschutzkonformes Ortungssystem auf Basis von C++ (Arduino ESP3
 
 ---
 
+## 📐 Display-Anzeige auf dem CYD 2.8" (320x240 ILI9341 LCD)
+
+```
+┌──────────────────────────────────────┬─────────────────────────┐
+│ ESP32 CYD  |  2D TOUCH LOCATOR       │ TARGET ID: a591a6d4     │
+├──────────────────────────────────────┤ PROXIMITY: 1.8 m        │
+│  [Station 2]                         │ WIFI:   -68 dB          │
+│      📡                              │ BLE :   -72 dB          │
+│       │                              ├─────────────────────────┤
+│       │       🟢 (WiFi)              │ NODES:   3/3            │
+│       │              🟣 (BLE)        │ DEVICES: 1              │
+│       │   🟡 (Target)                ├─────────────────────────┤
+│       │                              │ [  NEXT  ] (Touch)      │
+│  📡───────────────📡                 │ [  CALIB ] (Touch)      │
+│ [Station 1]   [Station 3]            │                         │
+└──────────────────────────────────────┴─────────────────────────┘
+```
+
+* Tippen auf ein Blip wählt das Gerät aus, `[NEXT]` / `[CALIB]` steuern Zielwahl und Raumkalibrierung.
+* Die störende RGB-LED auf der Rückseite des CYD wird abgeschaltet.
+
+---
+
 ## 🛠️ Fix (v1.0.1 Stations-Firmware): T-Display zeigt „[0/3 Stat.]“
 
-Das T-Display zählt eine Station nur als aktiv, wenn innerhalb von 5 s ein ESP-NOW-Paket von ihr ankommt. Das T-Display hört dabei fest auf **WLAN-Kanal 1**. Die Stationen der Version 1.0.0 haben ihre Pakete aber nur selten auf diesem Kanal gesendet:
+Der Peilsender (T-Display oder CYD) zählt eine Station nur als aktiv, wenn innerhalb von 5 s ein ESP-NOW-Paket von ihr ankommt. Er hört dabei fest auf **WLAN-Kanal 1**. Die Stationen der Version 1.0.0 haben ihre Pakete aber nur selten auf diesem Kanal gesendet:
 
 1. **Channel Hopping 1–13 (150 ms je Kanal)** – ESP-NOW sendet immer auf dem aktuellen Kanal, nur ca. 1/13 der Pakete lag auf Kanal 1.
 2. **BLE-Scan mit 97,5 % Duty-Cycle** (`setInterval(40)` / `setWindow(39)`) – der ESP32-C3 hat nur ein Funkteil, WLAN/ESP-NOW bekam kaum Sendezeit.
@@ -105,7 +131,7 @@ Die Stations-Firmware `station1–3.bin` (v1.0.1) wurde deshalb gepatcht:
 | Weitergeleitete Frames | alle (inkl. Beacons, ESP-NOW) | nur Frame-Control-Byte < `0x80` (Probe Requests, Datenframes); Beacons/Action-Frames/ESP-NOW werden verworfen |
 | BLE-Scan-Fenster | 39/40 (97,5 %) | 20/40 (50 %) |
 
-Paketformat (40 Byte) und T-Display-Firmware sind unverändert. **Alle drei Stationen neu flashen**, das T-Display muss nicht neu geflasht werden.
+Paketformat (40 Byte) und Peilsender-Firmware (T-Display & CYD) sind unverändert. **Alle drei Stationen neu flashen**, der Peilsender muss nicht neu geflasht werden.
 
 > Hinweis für den Arduino-Sketch: Die gleichen Änderungen sollten auch im Quellcode der Stationen nachgezogen werden (`esp_wifi_set_channel(1, …)` statt Hopping, im Promiscuous-Callback `if (pkt->payload[0] & 0x80) return;`, `pBLEScan->setWindow(20)`).
 
@@ -119,7 +145,7 @@ Für das Flashen wird **kein Tooling** auf dem Ziel-PC benötigt!
 
 1. Öffne die Seite [`web/flash.html`](web/flash.html) in einem WebSerial-fähigen Browser (Chrome, Edge, Brave oder Opera).
 2. Schließe die drei **ESP32-C3 Super Minis** nacheinander per USB-Kabel an und klicke auf der Webseite jeweils auf **"Flashen 🔌"** für Station 1, Station 2 und Station 3.
-3. Schließe danach das **TENSTAR T-Display Board** an und klicke auf **"Flashen 🎯"** für den Peilsender.
+3. Schließe danach deinen Peilsender an – **TENSTAR T-Display** *oder* **CYD 2.8"** – und klicke beim passenden Eintrag auf **"Flashen 🎯"**.
 
 ---
 
@@ -152,8 +178,7 @@ Ein herzlicher Dank geht an die ursprünglichen Autoren und Ersteller:
 
 ### GitHub Repository & Branches
 * Main Repository: [`https://github.com/TJRSchmidbauer/esp32-wifi-BLE-locator`](https://github.com/TJRSchmidbauer/esp32-wifi-BLE-locator)
-* BLE-WLAN Branch: T-Display 1.14" 90° Radar Edition
-* Master Branch: [`https://github.com/TJRSchmidbauer/esp32-wifi-BLE-locator`](https://github.com/TJRSchmidbauer/esp32-wifi-BLE-locator) (CYD 2.8" Touch Display 2D Floorplan Edition)
+* Branch `BLE-WLAN`: einziger Branch – enthält T-Display 1.14" 90° Radar Edition und CYD 2.8" Touch 2D-Raumplan Edition
 
 ### Lizenz
 Dieses Projekt steht unter den Bedingungen der **MIT-Lizenz** (übernommen aus dem Original-Repository).
