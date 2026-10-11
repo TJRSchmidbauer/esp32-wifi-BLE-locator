@@ -1,6 +1,6 @@
 # ESP32 Dual WiFi & BLE 90° Radar & Relativ-Ortungssystem (T-Display Edition)
 
-Ein autarkes, datenschutzkonformes Ortungssystem auf Basis von C++ (Arduino ESP32 Core) für den ESP32. Das System erfasst zeitgleich **WLAN Probe Requests über das gesamte 13-Kanal-Spektrum** und **Bluetooth Low Energy (BLE) Advertisements** (Smartphones, Smartwatches, In-Ear-Headsets, AirTags oder BLE Beacons) und ermöglicht die **2D-Relativ-Ortung im Raum** (Messung der Entfernung direkt zu deinen Händen!) sowie die **Richtungsführung per 90° Sektor-Radar** auf einem **1.14" LilyGO / TENSTAR T-Display** – ganz **ohne PC, ohne Server und ohne WLAN-Router!**
+Ein autarkes, datenschutzkonformes Ortungssystem auf Basis von C++ (Arduino ESP32 Core) für den ESP32. Das System erfasst zeitgleich **WLAN Probe Requests & Datenframes auf Kanal 1** und **Bluetooth Low Energy (BLE) Advertisements** (Smartphones, Smartwatches, In-Ear-Headsets, AirTags oder BLE Beacons) und ermöglicht die **2D-Relativ-Ortung im Raum** (Messung der Entfernung direkt zu deinen Händen!) sowie die **Richtungsführung per 90° Sektor-Radar** auf einem **1.14" LilyGO / TENSTAR T-Display** – ganz **ohne PC, ohne Server und ohne WLAN-Router!**
 
 ---
 
@@ -63,7 +63,7 @@ Ein autarkes, datenschutzkonformes Ortungssystem auf Basis von C++ (Arduino ESP3
 
 * 📡 **Dual Triangulation (Ziel + Handheld)**: Trianguliert zeitgleich die Position des gesuchten Geräts und deines T-Display Handhelds im Raum.
 * 🎓 **Raum-Kalibrierung per Taste 2**: Per Knopfdruck misst das T-Display 3s lang die Raumakustik und passt die Distanzberechnung an den Raum an.
-* 📶 **Full-Spectrum Channel Hopping (Kanal 1–13)**: Erfasst alle WLAN-Kanäle 1 bis 13 und scannte BLE mit 97,5 % Duty-Cycle (für Bluetooth-Headsets, Smartwatches & Tags).
+* 📶 **Fester ESP-NOW-Kanal 1 + BLE-Scan mit 50 % Duty-Cycle**: Stationen und T-Display funken auf demselben Kanal, damit die Messwerte zuverlässig ankommen (siehe Hinweis unten).
 * 📏 **"Heiß / Kalt"-Entfernung zu deinen Händen**: Die Zahl `DISTANZ ZU DIR` zählt live herunter (z. B. `3.2m ➔ 1.5m ➔ 0.4m`), wenn du dich auf das Versteck zubewegst!
 * 🧭 **Blickrichtungs-Modell (Station 2)**: Halte das T-Display mit dem Blick nach vorne Richtung Station 2. Das 90°-Radar richtet sich perfekt auf deine Blickrichtung aus.
 * 🛡️ **Paket-Wiederholungs-Filter (Hit-Count >= 3)**: Erfordert mindestens 3 empfangene Pakete und $\ge 2$ Stationen, um zufällige Signale von Autos oder Nachbarn zu 100% stummzuschalten.
@@ -86,6 +86,28 @@ Ein autarkes, datenschutzkonformes Ortungssystem auf Basis von C++ (Arduino ESP3
 │ [3/3 Stat. aktiv] | Ziel: 1            │
 └────────────────────────────────────────┘
 ```
+
+---
+
+## 🛠️ Fix (v1.0.1 Stations-Firmware): T-Display zeigt „[0/3 Stat.]“
+
+Das T-Display zählt eine Station nur als aktiv, wenn innerhalb von 5 s ein ESP-NOW-Paket von ihr ankommt. Das T-Display hört dabei fest auf **WLAN-Kanal 1**. Die Stationen der Version 1.0.0 haben ihre Pakete aber nur selten auf diesem Kanal gesendet:
+
+1. **Channel Hopping 1–13 (150 ms je Kanal)** – ESP-NOW sendet immer auf dem aktuellen Kanal, nur ca. 1/13 der Pakete lag auf Kanal 1.
+2. **BLE-Scan mit 97,5 % Duty-Cycle** (`setInterval(40)` / `setWindow(39)`) – der ESP32-C3 hat nur ein Funkteil, WLAN/ESP-NOW bekam kaum Sendezeit.
+3. **Jedes empfangene WLAN-Frame wurde weitergeleitet**, auch Router-Beacons und die ESP-NOW-Pakete der anderen Stationen bzw. der `tracker_ping` – die Stationen haben sich so gegenseitig „hochgeschaukelt“.
+
+Die Stations-Firmware `station1–3.bin` (v1.0.1) wurde deshalb gepatcht:
+
+| Änderung | Vorher | Nachher |
+| :--- | :--- | :--- |
+| WLAN-Kanal | Hopping 1–13 | fest Kanal 1 (gleicher Kanal wie T-Display) |
+| Weitergeleitete Frames | alle (inkl. Beacons, ESP-NOW) | nur Frame-Control-Byte < `0x80` (Probe Requests, Datenframes); Beacons/Action-Frames/ESP-NOW werden verworfen |
+| BLE-Scan-Fenster | 39/40 (97,5 %) | 20/40 (50 %) |
+
+Paketformat (40 Byte) und T-Display-Firmware sind unverändert. **Alle drei Stationen neu flashen**, das T-Display muss nicht neu geflasht werden.
+
+> Hinweis für den Arduino-Sketch: Die gleichen Änderungen sollten auch im Quellcode der Stationen nachgezogen werden (`esp_wifi_set_channel(1, …)` statt Hopping, im Promiscuous-Callback `if (pkt->payload[0] & 0x80) return;`, `pBLEScan->setWindow(20)`).
 
 ---
 
