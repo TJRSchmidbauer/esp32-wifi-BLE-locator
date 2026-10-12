@@ -119,8 +119,6 @@ Beide Peilsender nutzen **dieselben 3 Stationen** (ESP32-C3 Super Mini) und werd
 
 Der Quellcode der Stationen liegt in [`stations/station/station.ino`](stations/station/station.ino). Bei jeder Änderung baut GitHub Actions (`.github/workflows/build-stations.yml`) automatisch `station1–3.bin` und legt sie in `web/firmware/` ab – damit sind sie direkt über die Flash-Seite flashbar.
 
-> ⚠️ **Stand:** Solange der Build noch nicht gelaufen ist (GitHub Actions muss im Repo unter *Settings → Actions* erlaubt sein, mit *Read and write permissions*), enthält `web/firmware/` noch die Übergangs-Firmware v1.0.1 mit festem Kanal 1. Sie funktioniert, sucht WLAN aber nur auf Kanal 1 ab.
-
 **So arbeitet eine Station:**
 
 * **WLAN auf allen Kanälen 1–13**: Kanalplan `1, 2, 3, 4, 1, 5, 6, 7, 1, 8, 9, 10, 1, 11, 12, 13` (120 ms je Kanal, 200 ms auf Kanal 1).
