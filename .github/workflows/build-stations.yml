@@ -1,0 +1,64 @@
+name: Stations-Firmware bauen
+
+on:
+  push:
+    branches: [BLE-WLAN]
+    paths:
+      - 'stations/**'
+      - '.github/workflows/build-stations.yml'
+  pull_request:
+    paths:
+      - 'stations/**'
+      - '.github/workflows/build-stations.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  ESP32_INDEX: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+  FQBN: esp32:esp32:esp32c3
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: arduino/setup-arduino-cli@v2
+
+      - name: ESP32 Arduino Core installieren
+        run: |
+          arduino-cli core update-index --additional-urls "$ESP32_INDEX"
+          arduino-cli core install esp32:esp32 --additional-urls "$ESP32_INDEX"
+          arduino-cli core list
+
+      - name: Station 1–3 kompilieren
+        run: |
+          set -e
+          for n in 1 2 3; do
+            echo "#define STATION_NUM $n" > stations/station/station_id.h
+            arduino-cli compile --fqbn "$FQBN" --output-dir "build/station$n" stations/station
+            ls -la "build/station$n"
+            cp "build/station$n/station.ino.merged.bin" "web/firmware/station$n.bin"
+            cp "build/station$n/station.ino.merged.bin" "firmware/station$n.bin"
+          done
+          git checkout -- stations/station/station_id.h
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stations-firmware
+          path: web/firmware/station*.bin
+
+      - name: Firmware ins Repo committen (Flash-Seite)
+        if: github.event_name != 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/firmware/station*.bin firmware/station*.bin
+          if git diff --cached --quiet; then
+            echo "Keine Aenderung an der Firmware."
+          else
+            git commit -m "build: Stations-Firmware aus stations/station neu gebaut [skip ci]"
+            git push
+          fi
