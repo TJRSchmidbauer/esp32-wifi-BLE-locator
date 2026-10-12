@@ -1,6 +1,6 @@
 # ESP32 Dual WiFi & BLE 90° Radar & Relativ-Ortungssystem (T-Display & CYD)
 
-Ein autarkes, datenschutzkonformes Ortungssystem auf Basis von C++ (Arduino ESP32 Core) für den ESP32. Das System erfasst zeitgleich **WLAN Probe Requests & Datenframes auf Kanal 1** und **Bluetooth Low Energy (BLE) Advertisements** (Smartphones, Smartwatches, In-Ear-Headsets, AirTags oder BLE Beacons) und ermöglicht die **2D-Relativ-Ortung im Raum** (Messung der Entfernung direkt zu deinen Händen!) sowie die **Richtungsführung per 90° Sektor-Radar** auf einem **1.14" LilyGO / TENSTAR T-Display** – ganz **ohne PC, ohne Server und ohne WLAN-Router!**
+Ein autarkes, datenschutzkonformes Ortungssystem auf Basis von C++ (Arduino ESP32 Core) für den ESP32. Das System erfasst zeitgleich **WLAN-Geräte auf allen Kanälen 1–13** (Probe Requests & Datenframes) und **Bluetooth Low Energy (BLE) Advertisements** (Smartphones, Smartwatches, In-Ear-Headsets, AirTags oder BLE Beacons) und ermöglicht die **2D-Relativ-Ortung im Raum** (Messung der Entfernung direkt zu deinen Händen!) sowie die **Richtungsführung per 90° Sektor-Radar** auf einem **1.14" LilyGO / TENSTAR T-Display** – ganz **ohne PC, ohne Server und ohne WLAN-Router!**
 
 ---
 
@@ -23,7 +23,7 @@ Beide Peilsender nutzen **dieselben 3 Stationen** (ESP32-C3 Super Mini) und werd
 | :--- | :--- | :--- | :--- |
 | **TENSTAR / LilyGO T-Display ESP32** | Handheld Peilsender mit 1.14" IPS LCD Display | 🔗 [AliExpress T-Display kaufen](https://de.aliexpress.com/item/1005005970553639.html?gatewayAdapt=glo2deu) | 📦 [LilyGO T-Display 1.14" Case (MakerWorld)](https://makerworld.com/de/models/1921314-lilygo-t-display-1-14-case#profileId-2061606) |
 | **ESP32 CYD (ESP32-2432S028)** *(alternativ zum T-Display)* | Handheld 2.8" ILI9341 Touch-Display | 🔗 [AliExpress CYD Display kaufen](https://de.aliexpress.com/item/1005006599448997.html) | 📦 [ESP32 CYD 2.8" Snap-Fit Case (MakerWorld)](https://makerworld.com/de/models/3180623) |
-| **3x ESP32-C3 Super Mini** | Ecken-Stationen (WiFi Kanal 1 + BLE Sniffer) | 🔗 [AliExpress ESP32-C3 Super Mini kaufen](https://de.aliexpress.com/item/1005006599448997.html?spm=a2g0o.order_list.order_list_main.55.514f5c5fRjT0iT&gatewayAdapt=glo2deu) | 📦 [SuperMini Snap-Fit Case (MakerWorld)](https://makerworld.com/de/models/2851590-esp32-s3-supermini-case-snap-fit-options#profileId-3180623) |
+| **3x ESP32-C3 Super Mini** | Ecken-Stationen (13-Kanal WiFi + BLE Sniffer) | 🔗 [AliExpress ESP32-C3 Super Mini kaufen](https://de.aliexpress.com/item/1005006599448997.html?spm=a2g0o.order_list.order_list_main.55.514f5c5fRjT0iT&gatewayAdapt=glo2deu) | 📦 [SuperMini Snap-Fit Case (MakerWorld)](https://makerworld.com/de/models/2851590-esp32-s3-supermini-case-snap-fit-options#profileId-3180623) |
 
 ---
 
@@ -66,7 +66,7 @@ Beide Peilsender nutzen **dieselben 3 Stationen** (ESP32-C3 Super Mini) und werd
 
 * 📡 **Dual Triangulation (Ziel + Handheld)**: Trianguliert zeitgleich die Position des gesuchten Geräts und deines T-Display Handhelds im Raum.
 * 🎓 **Raum-Kalibrierung per Taste 2**: Per Knopfdruck misst das T-Display 3s lang die Raumakustik und passt die Distanzberechnung an den Raum an.
-* 📶 **Fester ESP-NOW-Kanal 1 + BLE-Scan mit 50 % Duty-Cycle**: Stationen und T-Display funken auf demselben Kanal, damit die Messwerte zuverlässig ankommen (siehe Hinweis unten).
+* 📶 **WLAN Kanal 1–13 + BLE-Scan mit 50 % Duty-Cycle**: Die Stationen durchsuchen alle WLAN-Kanäle, sammeln die Erkennungen und senden sie gebündelt auf Kanal 1 an den Peilsender (siehe [Stations-Firmware](#-stations-firmware-v110)).
 * 📏 **"Heiß / Kalt"-Entfernung zu deinen Händen**: Die Zahl `DISTANZ ZU DIR` zählt live herunter (z. B. `3.2m ➔ 1.5m ➔ 0.4m`), wenn du dich auf das Versteck zubewegst!
 * 🧭 **Blickrichtungs-Modell (Station 2)**: Halte das T-Display mit dem Blick nach vorne Richtung Station 2. Das 90°-Radar richtet sich perfekt auf deine Blickrichtung aus.
 * 🛡️ **Paket-Wiederholungs-Filter (Hit-Count >= 3)**: Erfordert mindestens 3 empfangene Pakete und $\ge 2$ Stationen, um zufällige Signale von Autos oder Nachbarn zu 100% stummzuschalten.
@@ -115,25 +115,19 @@ Beide Peilsender nutzen **dieselben 3 Stationen** (ESP32-C3 Super Mini) und werd
 
 ---
 
-## 🛠️ Fix (v1.0.1 Stations-Firmware): T-Display zeigt „[0/3 Stat.]“
+## 📡 Stations-Firmware (v1.1.0)
 
-Der Peilsender (T-Display oder CYD) zählt eine Station nur als aktiv, wenn innerhalb von 5 s ein ESP-NOW-Paket von ihr ankommt. Er hört dabei fest auf **WLAN-Kanal 1**. Die Stationen der Version 1.0.0 haben ihre Pakete aber nur selten auf diesem Kanal gesendet:
+Der Quellcode der Stationen liegt in [`stations/station/station.ino`](stations/station/station.ino). Bei jeder Änderung baut GitHub Actions (`.github/workflows/build-stations.yml`) automatisch `station1–3.bin` und legt sie in `web/firmware/` ab – damit sind sie direkt über die Flash-Seite flashbar.
 
-1. **Channel Hopping 1–13 (150 ms je Kanal)** – ESP-NOW sendet immer auf dem aktuellen Kanal, nur ca. 1/13 der Pakete lag auf Kanal 1.
-2. **BLE-Scan mit 97,5 % Duty-Cycle** (`setInterval(40)` / `setWindow(39)`) – der ESP32-C3 hat nur ein Funkteil, WLAN/ESP-NOW bekam kaum Sendezeit.
-3. **Jedes empfangene WLAN-Frame wurde weitergeleitet**, auch Router-Beacons und die ESP-NOW-Pakete der anderen Stationen bzw. der `tracker_ping` – die Stationen haben sich so gegenseitig „hochgeschaukelt“.
+**So arbeitet eine Station:**
 
-Die Stations-Firmware `station1–3.bin` (v1.0.1) wurde deshalb gepatcht:
+* **WLAN auf allen Kanälen 1–13**: Kanalplan `1, 2, 3, 4, 1, 5, 6, 7, 1, 8, 9, 10, 1, 11, 12, 13` (120 ms je Kanal, 200 ms auf Kanal 1).
+* **Erfasst werden Geräte, nicht Router**: Probe Requests (Gerät sucht WLAN) und Datenframes Client → Router (auch verbundene Handys/Laptops). Router-Beacons, Probe Responses und ESP-NOW-Pakete werden ignoriert.
+* **BLE**: aktiver Scan mit 50 % Duty-Cycle (`setInterval(100)` / `setWindow(50)`), damit WLAN genug Funkzeit behält.
+* **Senden nur auf Kanal 1**: Der Peilsender hört fest auf Kanal 1. Erkennungen von allen Kanälen werden zwischengespeichert (pro Gerät stärkster WLAN- und BLE-Wert) und bei jedem Besuch von Kanal 1 (ca. alle 0,6 s) per ESP-NOW gesendet. Ohne Erkennungen sendet die Station spätestens alle 1,5 s ein Lebenszeichen, damit sie als aktiv zählt.
+* Paketformat (40 Byte) unverändert – kompatibel zu T-Display (`tracker.bin`) und CYD (`tracker_cyd.bin`).
 
-| Änderung | Vorher | Nachher |
-| :--- | :--- | :--- |
-| WLAN-Kanal | Hopping 1–13 | fest Kanal 1 (gleicher Kanal wie T-Display) |
-| Weitergeleitete Frames | alle (inkl. Beacons, ESP-NOW) | nur Frame-Control-Byte < `0x80` (Probe Requests, Datenframes); Beacons/Action-Frames/ESP-NOW werden verworfen |
-| BLE-Scan-Fenster | 39/40 (97,5 %) | 20/40 (50 %) |
-
-Paketformat (40 Byte) und Peilsender-Firmware (T-Display & CYD) sind unverändert. **Alle drei Stationen neu flashen**, der Peilsender muss nicht neu geflasht werden.
-
-> Hinweis für den Arduino-Sketch: Die gleichen Änderungen sollten auch im Quellcode der Stationen nachgezogen werden (`esp_wifi_set_channel(1, …)` statt Hopping, im Promiscuous-Callback `if (pkt->payload[0] & 0x80) return;`, `pBLEScan->setWindow(20)`).
+> **Hintergrund – warum „[0/3 Stat.]“?** Die ursprüngliche Firmware (v1.0.0) wechselte die Kanäle und sendete dabei auf dem jeweils aktuellen Kanal, scannte BLE zu 97,5 % der Zeit und leitete jedes WLAN-Frame weiter (inkl. Beacons und ESP-NOW der anderen Stationen). Beim Peilsender auf Kanal 1 kam deshalb fast nichts an. Version 1.0.1 war eine Übergangslösung mit festem Kanal 1; v1.1.0 sucht wieder alle Kanäle ab und sendet trotzdem zuverlässig.
 
 ---
 
